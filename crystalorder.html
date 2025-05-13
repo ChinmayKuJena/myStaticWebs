@@ -1,0 +1,123 @@
+<!doctype html>
+<html>
+  <head>
+    <title>Dashboard Charts</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+      body {
+        font-family: sans-serif;
+        margin: 20px;
+      }
+      .chart-container {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 40px;
+      }
+      .chart-box {
+        flex: 1 1 45%;
+      }
+      canvas {
+        background: #f9f9f9;
+        border: 1px solid #ddd;
+        border-radius: 6px;
+        padding: 10px;
+        width: 100%;
+        height: 400px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>📊 Dashboard Charts</h1>
+    <div class="chart-container" id="chartContainer"></div>
+
+    <script>
+      const headers = {
+        'Content-Type': 'application/json',
+        Authorization:
+          'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjEsIm1vYmlsZSI6Ijg5MjYyMTUxNjciLCJuYW1lIjoiVGVzdCBBZG1pbiBVc2VyIiwidGVuYW50SWQiOjEsInJvbGVJZCI6MSwicm9sZU5hbWUiOiJBZG1pbiIsImxvY2F0aW9uTmFtZSI6bnVsbCwicGFydHlJZCI6bnVsbCwiaWF0IjoxNzQ3MDk3MzQwLCJleHAiOjE3NDc3MDIxNDB9.P54VhpHvHsIcMVvjpXHzArrWKyH_-yu2ydSM-blaA_8', // Replace with actual token
+      };
+
+      async function fetchAndRenderChart(chartConfig, containerId) {
+        try {
+          const apiUrl = `
+https://crystalorder-api.kalpanix.in/${chartConfig.api}`;
+          const response = await fetch(apiUrl, { method: 'GET', headers });
+          if (!response.ok) throw new Error('API call failed');
+          const { data } = await response.json();
+
+          const labels = data.map((item) => item[chartConfig.chartProps.label]);
+          const counts = data.map((item) => item[chartConfig.chartProps.count]);
+
+          const ctx = document.getElementById(containerId).getContext('2d');
+          new Chart(ctx, {
+            type: chartConfig.type,
+            data: {
+              labels: labels,
+              datasets: [
+                {
+                  label: chartConfig.title,
+                  data: counts,
+                  backgroundColor:
+                    chartConfig.type === 'bar'
+                      ? 'rgba(75, 192, 192, 0.6)'
+                      : ['#4caf50', '#2196f3', '#ff9800', '#9c27b0', '#e91e63'],
+                  borderColor:
+                    chartConfig.type === 'bar'
+                      ? 'rgba(75, 192, 192, 1)'
+                      : '#fff',
+                  borderWidth: 1,
+                },
+              ],
+            },
+            options:
+              chartConfig.type === 'bar'
+                ? {
+                    scales: {
+                      y: {
+                        beginAtZero: true,
+                        title: { display: true, text: 'Count' },
+                      },
+                      x: {
+                        title: { display: true, text: 'Label' },
+                      },
+                    },
+                  }
+                : {
+                    responsive: true,
+                    plugins: {
+                      legend: { position: 'bottom' },
+                    },
+                  },
+          });
+        } catch (error) {
+          console.error(`Error rendering chart (${chartConfig.title}):`, error);
+        }
+      }
+
+      async function initDashboard() {
+        try {
+          const container = document.getElementById('chartContainer');
+          const res = await fetch(
+            'https://crystalorder-api.kalpanix.in/reports/all-charts',
+            { headers },
+          );
+          const charts = await res.json();
+
+          charts.forEach((chart, index) => {
+            const canvasId = `chart${index}`;
+            const box = document.createElement('div');
+            box.className = 'chart-box';
+            box.innerHTML = `<h3>${chart.title}</h3><canvas id="${canvasId}"></canvas>`;
+            container.appendChild(box);
+
+            fetchAndRenderChart(chart, canvasId);
+          });
+        } catch (err) {
+          console.error('Error initializing dashboard:', err);
+        }
+      }
+
+      initDashboard();
+    </script>
+  </body>
+</html>
